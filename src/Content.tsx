@@ -1,4 +1,4 @@
-import { FC, useState, forwardRef, useEffect, useRef } from "react";
+import { FC, useState, forwardRef, useEffect, useRef, useCallback } from "react";
 import CloseIcon from '@rsuite/icons/Close';
 import { getChat, parseSearches, performSearch } from "./Utils";
 import { Button, Col, Container, FlexboxGrid, Loader, Panel, Input, Form, SelectPicker, IconButton, Slider } from "rsuite";
@@ -29,82 +29,85 @@ type State = WaitingForGPTState | ResolvedState | SearchingState;
 
 const Content: FC = () => {
     const [state, setState] = useState<State>({ state: 'resolved', messages: [{ role: 'user', content: '' }] });
-
+    const loading = state.state !== 'resolved';
+    const [temp, setTemp] = useState<number>(0.7);
     const [systemNote, setSystemNote] = useState<string>(`You are a helpful assistant who is able to search for information the user is interested in.
 You can perform a search by using a search tag like this: [search: query]. Do this whenever the user asks you a question, especially if you think you don't have access to the relevant files or information. Searching can give you direct access to relevant information or files.
 Information from the search will be included in a results tag like this: [results: relevant information from the search].
 Use these search results in combination with your own expert knowledge to reply to the user. Replies to the user should go in reply tags that look like this: [reply: your message to the user]. Only messages inside this tag will be seen by the user.`);
 
     const submit = useCallback(() => {
-        // getChat([{ role: 'system', content: systemNote }, ...messages], temp, async (resp: Message) => {
-        //     setMessages([...messages, resp]);
-        //     setLoading(false);
-        // });
-        // setLoading(true);
-    }, [state]);
+        getChat([{ role: 'system', content: systemNote }, ...state.messages], temp, async (resp: Message) => {
+            setState({state:'resolved', messages: [...state.messages, resp]});
+        });
+        setState({state:'waiting', messages: [...state.messages]});
+    }, [state, temp, systemNote]);
 
-    useEffect(() => {
-        if (messages.length) {
+    // useEffect(() => {
+    //     if (messages.length) {
 
-            if (autoSubmit.current) {
-                autoSubmit.current = false;
-                submit();
-            }
+    //         if (autoSubmit.current) {
+    //             autoSubmit.current = false;
+    //             submit();
+    //         }
 
-            const content = messages[messages.length - 1].content;
-            const searches = parseSearches(content);
-            if (searches.length) {
-                console.log('perform searches');
-                const performSearches = async () => {
-                    let results: string[] = [];
-                    await Promise.all(searches.map(async s => {
-                        const result = await performSearch(s);
-                        results = results.concat(result);
-                    }));
-                    if (results.length) {
-                        setMessages([...messages, { role: 'assistant', content: `[results: ${results.join(', ')}]` }]);
-                        autoSubmit.current = true;
-                    }
-                };
-                performSearches();
-            }
+    //         const content = messages[messages.length - 1].content;
+    //         const searches = parseSearches(content);
+    //         if (searches.length) {
+    //             console.log('perform searches');
+    //             const performSearches = async () => {
+    //                 let results: string[] = [];
+    //                 await Promise.all(searches.map(async s => {
+    //                     const result = await performSearch(s);
+    //                     results = results.concat(result);
+    //                 }));
+    //                 if (results.length) {
+    //                     setMessages([...messages, { role: 'assistant', content: `[results: ${results.join(', ')}]` }]);
+    //                     autoSubmit.current = true;
+    //                 }
+    //             };
+    //             performSearches();
+    //         }
 
-        }
-    }, [messages]);
+    //     }
+    // }, [messages]);
 
     const addMessage = () => {
-        setMessages([...messages, { role: 'user', content: '' }]);
+        setState({state: 'resolved', messages: [...state.messages, { role: 'user', content: '' }]});
     }
 
-    const updateMessageContent = (i: number) => {
+    const updateMessageContent = useCallback( (i: number) => {
         return (m: string) => {
-            messages[i].content = m;
-            setMessages(messages);
+            console.assert(state.state === 'resolved');
+            state.messages[i].content = m;
+            setState({state: 'resolved', messages: [...state.messages]});
         };
-    };
+    }, [state]);
 
-    const updateMessageRole = (i: number) => {
+    const updateMessageRole = useCallback((i: number) => {
         return (m: string | null) => {
-            messages[i].role = m as 'user' | 'assistant';
-            setMessages([...messages]);
+            console.assert(state.state === 'resolved');
+            state.messages[i].role = m as 'user' | 'assistant';
+            setState({state: 'resolved', messages: [...state.messages]});
         };
-    };
+    }, [state]);
 
-    const removeMessage = (i: number) => {
+    const removeMessage = useCallback((i: number) => {
         return () => {
-            messages.splice(i, 1);
-            setMessages([...messages]);
+            console.assert(state.state === 'resolved');
+            state.messages.splice(i, 1);
+            setState({state: 'resolved', messages: [...state.messages]});
         };
-    };
+    }, [state]);
 
     const renderMessage = (m: Message, i: number) => {
         const data = ['user', 'assistant'].map(
             item => ({ label: item, value: item })
         );
         return (<div className="message" key={i}>
-            <SelectPicker data={data} searchable={false} value={m.role} onChange={updateMessageRole(i)} className="picker" cleanable={false} style={{ width: 175 }} />
-            <Form.Control name={`message_${i}`} accepter={Textarea} onChange={updateMessageContent(i)} defaultValue={messages[i].content} />
-            <IconButton className="remove-btn" icon={<CloseIcon />} onClick={removeMessage(i)} />
+            <SelectPicker data={data} searchable={false} value={m.role} onChange={updateMessageRole(i)} className="picker" cleanable={false} style={{ width: 175 }} disabled={loading} />
+            <Form.Control name={`message_${i}`} accepter={Textarea} onChange={updateMessageContent(i)} defaultValue={state.messages[i].content} disabled={loading} />
+            <IconButton className="remove-btn" icon={<CloseIcon />} onClick={removeMessage(i)} disabled={loading} />
         </div>);
     }
 
@@ -130,7 +133,7 @@ Use these search results in combination with your own expert knowledge to reply 
                     </FlexboxGridItem>
                     <FlexboxGridItem as={Col} xs={24} md={12} lg={16}>
                         <Form fluid>
-                            {messages.map(renderMessage)}
+                            {state.messages.map(renderMessage)}
                             {loading ? <div className="loading-holder"><Loader size="md" content="GPT-4 is generating..." /></div> : ''}
                             <div className="button-holder"><Button onClick={addMessage} disabled={loading}>Add message</Button><Button onClick={submit} disabled={loading} appearance="primary">Submit</Button></div>
                         </Form>
