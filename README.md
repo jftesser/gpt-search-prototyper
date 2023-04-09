@@ -44,3 +44,11 @@ You don’t have to ever use `eject`. The curated feature set is suitable for sm
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
 To learn React, check out the [React documentation](https://reactjs.org/).
+
+## set your keys
+Set your OpenAI API key in firebase
+- Type `firebase functions:config:set openai.key="THE API KEY"` in the terminal
+- Type `firebase functions:config:set openai.org="THE ORG ID` in the terminal
+- In terminal, go to `/functions` using `cd functions` from your root directory
+- Type `firebase functions:config:get > .runtimeconfig.json` in the terminal
+- In `.runtimeconfig.json` file, you should see this:
