@@ -24,11 +24,8 @@ const ScrollToTop = () => {
   return null;
 }
 
-const getChat = (messages: Message[], temp: number, callback: Function) => {
-  getFBChat({ messages, temp }).then((result) => {
-    const data: any = result.data;
-    callback(data);
-  });
+const getChat = async (messages: Message[], temp: number) : Promise<Message> => {
+  return (await getFBChat({ messages, temp })).data as Message;
 }
 
 const parseSearches = (text: string): string[] => {

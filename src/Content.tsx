@@ -37,10 +37,13 @@ Information from the search will be included in a results tag like this: [result
 Use these search results in combination with your own expert knowledge to reply to the user. Replies to the user should go in reply tags that look like this: [reply: your message to the user]. Only messages inside this tag will be seen by the user.`);
 
     const submit = useCallback(() => {
-        getChat([{ role: 'system', content: systemNote }, ...state.messages], temp, async (resp: Message) => {
-            setState({state:'resolved', messages: [...state.messages, resp]});
-        });
         setState({state:'waiting', messages: [...state.messages]});
+        const sumbitToAPI = async() => {
+            const newMessage = await getChat([{ role: 'system', content: systemNote }, ...state.messages], temp);
+            setState({state:'resolved', messages: [...state.messages, newMessage]});
+        };
+        sumbitToAPI();
+        
     }, [state, temp, systemNote]);
 
     // useEffect(() => {
