@@ -41,13 +41,13 @@ Use these search results in combination with your own expert knowledge to reply 
             if (searches.length) {
                 console.log('perform searches');
                 const performSearches = async () => {
-                    let results = '';
+                    let results: string[] = [];
                     await Promise.all(searches.map(async s => {
                         const result = await performSearch(s);
-                        results += result;
+                        results = results.concat(result);
                     }));
                     if (results.length) {
-                        setMessages([...messages, { role: 'assistant', content: `[results: ${results}]` }]);
+                        setMessages([...messages, { role: 'assistant', content: `[results: ${results.join(', ')}]` }]);
                         autoSubmit.current = true;
                     }
                 };
