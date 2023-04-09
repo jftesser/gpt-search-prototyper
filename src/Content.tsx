@@ -1,6 +1,6 @@
-import { FC, useState, forwardRef } from "react";
+import { FC, useState, forwardRef, useEffect, useRef } from "react";
 import CloseIcon from '@rsuite/icons/Close';
-import { getChat } from "./Utils";
+import { getChat, parseSearches, performSearch } from "./Utils";
 import { Button, Col, Container, FlexboxGrid, Loader, Panel, Input, Form, SelectPicker, IconButton, Slider } from "rsuite";
 import FlexboxGridItem from "rsuite/esm/FlexboxGrid/FlexboxGridItem";
 import "./Content.less";
@@ -12,16 +12,50 @@ const TextareaTall = forwardRef<HTMLTextAreaElement>((props, ref) => <Input rows
 
 const Content: FC = () => {
     const [messages, setMessages] = useState<Message[]>([{ role: 'user', content: '' }]);
+    const autoSubmit = useRef<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
     const [temp, setTemp] = useState<number>(0.7);
-    const [systemNote, setSystemNote] = useState<string>('You are a helpful assistant.');
+    const [systemNote, setSystemNote] = useState<string>(`You are a helpful assistant who is able to search for information the user is interested in.
+You can perform a search by using a search tag like this: [search: query]. Do this whenever the user asks you a question, especially if you think you don't have access to the relevant files or information. Searching can give you direct access to relevant information or files.
+Information from the search will be included in a results tag like this: [results: relevant information from the search].
+Use these search results in combination with your own expert knowledge to reply to the user. Replies to the user should go in reply tags that look like this: [reply: your message to the user]. Only messages inside this tag will be seen by the user.`);
+
     const submit = () => {
-        getChat([{ role: 'system', content: systemNote }, ...messages], temp, (resp: Message) => {
+        getChat([{ role: 'system', content: systemNote }, ...messages], temp, async (resp: Message) => {
             setMessages([...messages, resp]);
             setLoading(false);
         });
         setLoading(true);
     };
+
+    useEffect(() => {
+        if (messages.length) {
+            
+            if (autoSubmit.current) {
+                autoSubmit.current = false;
+                submit();
+            }
+
+            const content = messages[messages.length - 1].content;
+            const searches = parseSearches(content);
+            if (searches.length) {
+                console.log('perform searches');
+                const performSearches = async () => {
+                    let results = '';
+                    await Promise.all(searches.map(async s => {
+                        const result = await performSearch(s);
+                        results += result;
+                    }));
+                    if (results.length) {
+                        setMessages([...messages, { role: 'assistant', content: `[results: ${results}]` }]);
+                        autoSubmit.current = true;
+                    }
+                };
+                performSearches();
+            }
+
+        }
+    }, [messages]);
 
     const addMessage = () => {
         setMessages([...messages, { role: 'user', content: '' }]);

@@ -31,4 +31,15 @@ const getChat = (messages: Message[], temp: number, callback: Function) => {
   });
 }
 
-export { ScrollToTop, getChat }
+const parseSearches = (text: string): string[] => {
+  const pattern = /\[search:(.*)\]/gm;
+  const matches = Array.from(text.matchAll(pattern));
+  return matches.map(m => m[1].trim());
+}
+
+const performSearch = (search: string): Promise<string> => {
+  console.log('performing a search')
+  return Promise.resolve(`some specific information about ${search}`);
+}
+
+export { ScrollToTop, getChat, parseSearches, performSearch }
