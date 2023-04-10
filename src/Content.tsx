@@ -48,10 +48,11 @@ Make sure to use the search results to answer the question. The search results a
             const content = newMessage.content;
             const searches = parseSearches(content);
             if (searches.length) {
+                setState({ state: 'searching', messages });
+
                 const performSearch = await (await snippet.load())(documentContent);
 
                 let results: string[] = [];
-                setState({ state: 'searching', messages });
                 await Promise.all(searches.map(async s => {
                     const result = await performSearch(s);
                     results = results.concat(result);
