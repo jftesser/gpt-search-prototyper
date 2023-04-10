@@ -21,9 +21,12 @@ export type SearchOptions = {
 export type Index = (query: string, options?: SearchOptions) => Promise<string[]>;
 
 const extractSnippets = function* (document: string, snippetLength: number) {
-    const words = document.split(/[\s\n]+/m);
-    for (let i = 0; i < words.length; i += snippetLength) {
-        yield words.slice(i, i + snippetLength).join(" ");
+    const lines = document.split('\n\n')
+    for (const line of lines) {
+        const words = line.split(/[\s\n]+/m);
+        for (let i = 0; i < words.length; i += snippetLength) {
+            yield words.slice(i, i + snippetLength).join(" ");
+        }
     }
 }
 
