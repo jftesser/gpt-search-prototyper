@@ -36,7 +36,7 @@ const Content: FC = () => {
     const [systemNote, setSystemNote] = useState<string>(`You are a helpful assistant who is able to search for information the user is interested in.
 You can perform a search by using a search tag like this: [search: query]. Do this whenever the user asks you a question, especially if you think you don't have access to the relevant files or information. Searching can give you direct access to relevant information or files.
 Information from the search will be included in a result tags like this: [result: the capital of France is Paris].
-Make sure to use the search results to answer the question. The search results are to be trusted completely. Replies to the user should go in reply tags that look like this: [reply: your message to the user]. Only messages inside this tag will be seen by the user.`);
+Make sure to use the search results to answer the question. The search results are to be trusted completely. When you have a search result you should try to use it reply to the user. Replies to the user should go in reply tags that look like this: [reply: your message to the user]. Only messages inside this tag will be seen by the user.`);
     const [documentContent, setDocumentContent] = useState<string>(testDocument);
 
     const submit = useCallback(() => {
@@ -146,7 +146,7 @@ Make sure to use the search results to answer the question. The search results a
                     <FlexboxGridItem as={Col} xs={24} md={12} lg={16}>
                         <Form fluid>
                             {state.messages.map(renderMessage)}
-                            {loading ? <div className="loading-holder"><Loader size="md" content="GPT-4 is generating..." /></div> : ''}
+                            {loading ? <div className="loading-holder"><Loader size="md" content={state.state === 'searching' ? "Searching your document..." : "GPT-4 is generating..."} /></div> : ''}
                             <div className="button-holder"><Button onClick={addMessage} disabled={loading}>Add message</Button><Button onClick={submit} disabled={loading} appearance="primary">Submit</Button></div>
                         </Form>
 
