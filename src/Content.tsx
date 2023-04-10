@@ -43,11 +43,19 @@ Make sure to use the search results to answer the question. The search results a
         console.assert(state.state === 'resolved');
         setState({ state: 'waiting', messages: [...state.messages] });
         const sumbitToAPI = async () => {
-            const newMessage = await getChat([{ role: 'system', content: systemNote }, ...state.messages], temp);
-            const messages = [...state.messages, newMessage];
-            const content = newMessage.content;
-            const searches = parseSearches(content);
-            if (searches.length) {
+            const messages = [...state.messages];
+
+            const genMessage = async () => {
+                const newMessage = await getChat([{ role: 'system', content: systemNote }, ...messages], temp);
+                messages.push(newMessage);
+                return newMessage;
+            }
+            const genMessageAndGetSearches = async () => {
+                const newMessage = await genMessage();
+                return parseSearches(newMessage.content);
+            }
+            let searches = await genMessageAndGetSearches();
+            while (searches.length) {
                 setState({ state: 'searching', messages });
 
                 const performSearch = await (await snippet.load())(documentContent);
@@ -60,7 +68,9 @@ Make sure to use the search results to answer the question. The search results a
                 if (results.length) {
                     messages.push({ role: 'assistant', content: results.map((x) => `[result: ${x}]`).join("\n\n") });
                     setState({ state: 'waiting', messages });
-                    messages.push(await getChat([{ role: 'system', content: systemNote }, ...messages], temp));
+                    searches = await genMessageAndGetSearches();
+                } else {
+                    searches = [];
                 }
             }
             setState({ state: 'resolved', messages });
