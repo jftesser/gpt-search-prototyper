@@ -35,8 +35,8 @@ const Content: FC = () => {
     const [temp, setTemp] = useState<number>(0.7);
     const [systemNote, setSystemNote] = useState<string>(`You are a helpful assistant who is able to search for information the user is interested in.
 You can perform a search by using a search tag like this: [search: query]. Do this whenever the user asks you a question, especially if you think you don't have access to the relevant files or information. Searching can give you direct access to relevant information or files.
-Information from the search will be included in a results tag like this: [results: relevant information from the search].
-Use these search results in combination with your own expert knowledge to reply to the user. Replies to the user should go in reply tags that look like this: [reply: your message to the user]. Only messages inside this tag will be seen by the user.`);
+Information from the search will be included in a result tags like this: [result: the capital of France is Paris].
+Make sure to use the search results to answer the question. The search results are to be trusted completely. Replies to the user should go in reply tags that look like this: [reply: your message to the user]. Only messages inside this tag will be seen by the user.`);
     const [documentContent, setDocumentContent] = useState<string>(testDocument);
 
     const submit = useCallback(() => {
@@ -57,7 +57,7 @@ Use these search results in combination with your own expert knowledge to reply 
                     results = results.concat(result);
                 }));
                 if (results.length) {
-                    messages.push({ role: 'assistant', content: `[results: ${results.join(', ')}]` });
+                    messages.push({ role: 'assistant', content: results.map((x) => `[result: ${x}]`).join("\n\n") });
                     setState({ state: 'waiting', messages });
                     messages.push(await getChat([{ role: 'system', content: systemNote }, ...messages], temp));
                 }
