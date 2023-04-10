@@ -37,53 +37,42 @@ Information from the search will be included in a results tag like this: [result
 Use these search results in combination with your own expert knowledge to reply to the user. Replies to the user should go in reply tags that look like this: [reply: your message to the user]. Only messages inside this tag will be seen by the user.`);
 
     const submit = useCallback(() => {
-        setState({state:'waiting', messages: [...state.messages]});
-        const sumbitToAPI = async() => {
+        console.assert(state.state === 'resolved');
+        setState({ state: 'waiting', messages: [...state.messages] });
+        const sumbitToAPI = async () => {
             const newMessage = await getChat([{ role: 'system', content: systemNote }, ...state.messages], temp);
-            setState({state:'resolved', messages: [...state.messages, newMessage]});
+            const content = newMessage.content;
+            const searches = parseSearches(content);
+            if (searches.length) {
+                let results: string[] = [];
+                setState({ state: 'searching', messages: [...state.messages, newMessage] });
+                await Promise.all(searches.map(async s => {
+                    const result = await performSearch(s);
+                    results = results.concat(result);
+                }));
+                if (results.length) {
+                    const searchMessage: Message = { role: 'assistant', content: `[results: ${results.join(', ')}]` };
+                    setState({ state: 'waiting', messages: [...state.messages, newMessage, searchMessage] });
+                    const newNewMessage = await getChat([{ role: 'system', content: systemNote }, ...state.messages, newMessage, searchMessage], temp);
+                    setState({ state: 'resolved', messages: [...state.messages, newMessage, searchMessage, newNewMessage] });
+                }
+            } else {
+                setState({ state: 'resolved', messages: [...state.messages, newMessage] });
+            }
         };
         sumbitToAPI();
-        
+
     }, [state, temp, systemNote]);
 
-    // useEffect(() => {
-    //     if (messages.length) {
-
-    //         if (autoSubmit.current) {
-    //             autoSubmit.current = false;
-    //             submit();
-    //         }
-
-    //         const content = messages[messages.length - 1].content;
-    //         const searches = parseSearches(content);
-    //         if (searches.length) {
-    //             console.log('perform searches');
-    //             const performSearches = async () => {
-    //                 let results: string[] = [];
-    //                 await Promise.all(searches.map(async s => {
-    //                     const result = await performSearch(s);
-    //                     results = results.concat(result);
-    //                 }));
-    //                 if (results.length) {
-    //                     setMessages([...messages, { role: 'assistant', content: `[results: ${results.join(', ')}]` }]);
-    //                     autoSubmit.current = true;
-    //                 }
-    //             };
-    //             performSearches();
-    //         }
-
-    //     }
-    // }, [messages]);
-
     const addMessage = () => {
-        setState({state: 'resolved', messages: [...state.messages, { role: 'user', content: '' }]});
+        setState({ state: 'resolved', messages: [...state.messages, { role: 'user', content: '' }] });
     }
 
-    const updateMessageContent = useCallback( (i: number) => {
+    const updateMessageContent = useCallback((i: number) => {
         return (m: string) => {
             console.assert(state.state === 'resolved');
             state.messages[i].content = m;
-            setState({state: 'resolved', messages: [...state.messages]});
+            setState({ state: 'resolved', messages: [...state.messages] });
         };
     }, [state]);
 
@@ -91,7 +80,7 @@ Use these search results in combination with your own expert knowledge to reply 
         return (m: string | null) => {
             console.assert(state.state === 'resolved');
             state.messages[i].role = m as 'user' | 'assistant';
-            setState({state: 'resolved', messages: [...state.messages]});
+            setState({ state: 'resolved', messages: [...state.messages] });
         };
     }, [state]);
 
@@ -99,7 +88,7 @@ Use these search results in combination with your own expert knowledge to reply 
         return () => {
             console.assert(state.state === 'resolved');
             state.messages.splice(i, 1);
-            setState({state: 'resolved', messages: [...state.messages]});
+            setState({ state: 'resolved', messages: [...state.messages] });
         };
     }, [state]);
 
