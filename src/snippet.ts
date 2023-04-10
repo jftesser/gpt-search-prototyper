@@ -11,7 +11,7 @@ export type Env = (document: string, options?: IndexOptions) => Promise<Index>;
 
 type IndexInternals = {
     model: use.UniversalSentenceEncoder,
-    snippets: [string, tf.Tensor2D][]
+    snippets: [string, Float32Array | Int32Array | Uint8Array][]
 }
 
 export type SearchOptions = {
@@ -35,7 +35,7 @@ const search = async (index: IndexInternals, query: string, options?: SearchOpti
     const embedTensor = await index.model.embed(query);
     let ret: [string, number][] = [];
     for (const [snippet, embed] of index.snippets) {
-        const score = await tf.matMul(embedTensor, embed, false, true).data();
+        const score = await tf.matMul(embedTensor, tf.reshape(embed, [1, -1]), false, true).data();
         console.log("Score:", snippet, score[0]);
         if (ret.length < numResults) {
             ret.push([snippet, score[0]]);
@@ -51,20 +51,20 @@ const search = async (index: IndexInternals, query: string, options?: SearchOpti
 const index = async (model: use.UniversalSentenceEncoder, document: string, options?: IndexOptions): Promise<Index> => {
     const snippetLength = options?.snippetLength ?? 80;
     const snippets = Array.from(extractSnippets(document, snippetLength));
-    let embeds: [string, tf.Tensor2D][] = [];
-    const maxEmbeddingAtOnce = 200;
+    let embeds: Promise<[string, Float32Array | Int32Array | Uint8Array]>[] = [];
+    const maxEmbeddingAtOnce = 50;
     for (let i = 0; i < snippets.length; i += maxEmbeddingAtOnce) {
         const thisSlice = snippets.slice(i, i + maxEmbeddingAtOnce)
         console.log("embedding", i, thisSlice.length, snippets.length)
         const embedTensor = await model.embed(thisSlice);
-        const newEmbeds = [...Array(thisSlice.length).keys()].map((j): [string, tf.Tensor2D] => {
-            return [thisSlice[j], tf.slice(embedTensor, [j, 0], [1])]
+        const newEmbeds = [...Array(thisSlice.length).keys()].map((j): Promise<[string, Float32Array | Int32Array | Uint8Array]> => {
+            return (async () => { return [thisSlice[j], await tf.slice(embedTensor, [j, 0], [1]).data()] })()
         })
         embeds = embeds.concat(newEmbeds);
     }
     const internals: IndexInternals = {
         model: model,
-        snippets: embeds,
+        snippets: await Promise.all(embeds),
     }
     return async (query: string, options?: SearchOptions) => { return await search(internals, query, options) }
 }
