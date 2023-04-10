@@ -6,6 +6,7 @@ import FlexboxGridItem from "rsuite/esm/FlexboxGrid/FlexboxGridItem";
 import "./Content.less";
 import { Message } from "./types";
 import { signOut } from "./firebase/firebaseSetup";
+import { testDocument } from "./testDoc";
 
 const Textarea = forwardRef<HTMLTextAreaElement>((props, ref) => <Input {...props} as="textarea" ref={ref} />);
 const TextareaTall = forwardRef<HTMLTextAreaElement>((props, ref) => <Input rows={7} {...props} as="textarea" ref={ref} />);
@@ -35,6 +36,7 @@ const Content: FC = () => {
 You can perform a search by using a search tag like this: [search: query]. Do this whenever the user asks you a question, especially if you think you don't have access to the relevant files or information. Searching can give you direct access to relevant information or files.
 Information from the search will be included in a results tag like this: [results: relevant information from the search].
 Use these search results in combination with your own expert knowledge to reply to the user. Replies to the user should go in reply tags that look like this: [reply: your message to the user]. Only messages inside this tag will be seen by the user.`);
+    const [documentContent, setDocumentContent] = useState<string>(testDocument);
 
     const submit = useCallback(() => {
         console.assert(state.state === 'resolved');
@@ -108,7 +110,7 @@ Use these search results in combination with your own expert knowledge to reply 
                 <FlexboxGrid>
                     <FlexboxGridItem as={Col} xs={24} className="header"><h1>GPT-4 Prototyper</h1><Button onClick={signOut}>Log out</Button></FlexboxGridItem>
                     <FlexboxGridItem as={Col} xs={24} md={12} lg={8}>
-                        <Panel header="System Note" bordered={true}>
+                        <Panel className="panel" header="System Note" bordered={true}>
                             <Form fluid>
                                 <Form.Control name="systemnote" accepter={TextareaTall} onChange={setSystemNote} value={systemNote} />
                             </Form>
@@ -120,6 +122,11 @@ Use these search results in combination with your own expert knowledge to reply 
                                     setTemp(value / 100);
                                 }}
                             />
+                        </Panel>
+                        <Panel className="panel" header="Document to Search" bordered={true}>
+                            <Form fluid>
+                                <Form.Control name="document" accepter={TextareaTall} onChange={setDocumentContent} value={documentContent} />
+                            </Form>
                         </Panel>
                     </FlexboxGridItem>
                     <FlexboxGridItem as={Col} xs={24} md={12} lg={16}>
