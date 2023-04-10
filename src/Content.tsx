@@ -1,4 +1,4 @@
-import { FC, useState, forwardRef, useEffect, useRef, useCallback } from "react";
+import { FC, useState, forwardRef, useCallback } from "react";
 import CloseIcon from '@rsuite/icons/Close';
 import { getChat, parseSearches, performSearch } from "./Utils";
 import { Button, Col, Container, FlexboxGrid, Loader, Panel, Input, Form, SelectPicker, IconButton, Slider } from "rsuite";
@@ -41,24 +41,23 @@ Use these search results in combination with your own expert knowledge to reply 
         setState({ state: 'waiting', messages: [...state.messages] });
         const sumbitToAPI = async () => {
             const newMessage = await getChat([{ role: 'system', content: systemNote }, ...state.messages], temp);
+            const messages = [...state.messages, newMessage];
             const content = newMessage.content;
             const searches = parseSearches(content);
             if (searches.length) {
                 let results: string[] = [];
-                setState({ state: 'searching', messages: [...state.messages, newMessage] });
+                setState({ state: 'searching', messages});
                 await Promise.all(searches.map(async s => {
                     const result = await performSearch(s);
                     results = results.concat(result);
                 }));
                 if (results.length) {
-                    const searchMessage: Message = { role: 'assistant', content: `[results: ${results.join(', ')}]` };
-                    setState({ state: 'waiting', messages: [...state.messages, newMessage, searchMessage] });
-                    const newNewMessage = await getChat([{ role: 'system', content: systemNote }, ...state.messages, newMessage, searchMessage], temp);
-                    setState({ state: 'resolved', messages: [...state.messages, newMessage, searchMessage, newNewMessage] });
+                    messages.push({ role: 'assistant', content: `[results: ${results.join(', ')}]` });
+                    setState({ state: 'waiting', messages});
+                    messages.push(await getChat([{ role: 'system', content: systemNote }, ...messages], temp));
                 }
-            } else {
-                setState({ state: 'resolved', messages: [...state.messages, newMessage] });
             }
+            setState({ state: 'resolved', messages});
         };
         sumbitToAPI();
 
