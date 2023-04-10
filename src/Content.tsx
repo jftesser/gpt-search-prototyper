@@ -66,7 +66,7 @@ Make sure to use the search results to answer the question. The search results a
         };
         sumbitToAPI();
 
-    }, [state, temp, systemNote]);
+    }, [state.state, state.messages, systemNote, temp, documentContent]);
 
     const addMessage = () => {
         setState({ state: 'resolved', messages: [...state.messages, { role: 'user', content: '' }] });
