@@ -51,10 +51,17 @@ const search = async (index: IndexInternals, query: string, options?: SearchOpti
 const index = async (model: use.UniversalSentenceEncoder, document: string, options?: IndexOptions): Promise<Index> => {
     const snippetLength = options?.snippetLength ?? 80;
     const snippets = Array.from(extractSnippets(document, snippetLength));
-    const embedTensor = await model.embed(snippets);
-    const embeds = [...Array(snippets.length).keys()].map((i): [string, tf.Tensor2D] => {
-        return [snippets[i], tf.slice(embedTensor, [i, 0], [1])]
-    })
+    let embeds: [string, tf.Tensor2D][] = [];
+    const maxEmbeddingAtOnce = 200;
+    for (let i = 0; i < snippets.length; i += maxEmbeddingAtOnce) {
+        const thisSlice = snippets.slice(i, i + maxEmbeddingAtOnce)
+        console.log("embedding", i, thisSlice.length, snippets.length)
+        const embedTensor = await model.embed(thisSlice);
+        const newEmbeds = [...Array(thisSlice.length).keys()].map((j): [string, tf.Tensor2D] => {
+            return [thisSlice[j], tf.slice(embedTensor, [j, 0], [1])]
+        })
+        embeds = embeds.concat(newEmbeds);
+    }
     const internals: IndexInternals = {
         model: model,
         snippets: embeds,
