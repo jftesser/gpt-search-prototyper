@@ -1,12 +1,13 @@
 import { FC, useState, forwardRef, useCallback } from "react";
 import CloseIcon from '@rsuite/icons/Close';
-import { getChat, parseSearches, performSearch } from "./Utils";
+import { getChat, parseSearches } from "./Utils";
 import { Button, Col, Container, FlexboxGrid, Loader, Panel, Input, Form, SelectPicker, IconButton, Slider } from "rsuite";
 import FlexboxGridItem from "rsuite/esm/FlexboxGrid/FlexboxGridItem";
 import "./Content.less";
 import { Message } from "./types";
 import { signOut } from "./firebase/firebaseSetup";
 import { testDocument } from "./testDoc";
+import * as snippet from "./snippet";
 
 const Textarea = forwardRef<HTMLTextAreaElement>((props, ref) => <Input {...props} as="textarea" ref={ref} />);
 const TextareaTall = forwardRef<HTMLTextAreaElement>((props, ref) => <Input rows={7} {...props} as="textarea" ref={ref} />);
@@ -47,19 +48,21 @@ Use these search results in combination with your own expert knowledge to reply 
             const content = newMessage.content;
             const searches = parseSearches(content);
             if (searches.length) {
+                const performSearch = await (await snippet.load())(documentContent);
+
                 let results: string[] = [];
-                setState({ state: 'searching', messages});
+                setState({ state: 'searching', messages });
                 await Promise.all(searches.map(async s => {
                     const result = await performSearch(s);
                     results = results.concat(result);
                 }));
                 if (results.length) {
                     messages.push({ role: 'assistant', content: `[results: ${results.join(', ')}]` });
-                    setState({ state: 'waiting', messages});
+                    setState({ state: 'waiting', messages });
                     messages.push(await getChat([{ role: 'system', content: systemNote }, ...messages], temp));
                 }
             }
-            setState({ state: 'resolved', messages});
+            setState({ state: 'resolved', messages });
         };
         sumbitToAPI();
 

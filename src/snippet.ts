@@ -33,6 +33,7 @@ const search = async (index: IndexInternals, query: string, options?: SearchOpti
     let ret: [string, number][] = [];
     for (const [snippet, embed] of index.snippets) {
         const score = await tf.matMul(embedTensor, embed, false, true).data();
+        console.log("Score:", snippet, score[0]);
         if (ret.length < numResults) {
             ret.push([snippet, score[0]]);
             ret.sort(([_a, n], [_b, m]) => n - m)
