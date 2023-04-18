@@ -33,9 +33,9 @@ const Content: FC = () => {
     const [state, setState] = useState<State>({ state: 'resolved', messages: [{ role: 'user', content: '' }] });
     const loading = state.state !== 'resolved';
     const [temp, setTemp] = useState<number>(0.7);
-    const [systemNote, setSystemNote] = useState<string>(`You are a helpful assistant who is able to search for information the user is interested in.
-You can perform a search by using a search tag like this: [search: query]. Do this whenever the user asks you a question, especially if you think you don't have access to the relevant files or information. Searching can give you direct access to relevant information or files.
-Information from the search will be included in a result tags like this: [result: the capital of France is Paris].
+    const [systemNote, setSystemNote] = useState<string>(`You are a helpful assistant who communicates inside of tags such as [search: description of the machine] and [reply: the machine is a way of producing text]. You have a special ability to search relevant data sources for the information the user is interested in.
+You can perform a search by using a search tag like this: [search: the capital of France]. Do this whenever the user asks you a question, especially if you think you don't have access to the relevant files or information. Searching can give you direct access to relevant information or files.
+Information from the search will be included in a result tags like this: [result: the capital of France is Paris]. When you see a result tag you should use it to answer the user.
 Make sure to use the search results to answer the question. The search results are to be trusted completely. When you have a search result you should try to use it reply to the user. Replies to the user should go in reply tags that look like this: [reply: your message to the user]. Only messages inside this tag will be seen by the user.`);
     const [documentContent, setDocumentContent] = useState<string>(testDocument);
 
@@ -66,7 +66,7 @@ Make sure to use the search results to answer the question. The search results a
                     results = results.concat(result);
                 }));
                 if (results.length) {
-                    messages.push({ role: 'assistant', content: results.map((x) => `[result: ${x}]`).join("\n\n") });
+                    messages.push({ role: 'assistant', content: [...results.map((x) => `[result: ${x}]`), "[thought: I should use this information to reply to the user]"].join("\n\n") });
                     setState({ state: 'waiting', messages });
                     searches = await genMessageAndGetSearches();
                 } else {
@@ -122,7 +122,7 @@ Make sure to use the search results to answer the question. The search results a
         <div className="content">
             <Container className="container">
                 <FlexboxGrid>
-                    <FlexboxGridItem as={Col} xs={24} className="header"><h1>GPT-4 Prototyper</h1><Button onClick={signOut}>Log out</Button></FlexboxGridItem>
+                    <FlexboxGridItem as={Col} xs={24} className="header"><h1>GPT-4 Search Prototyper</h1><Button onClick={signOut}>Log out</Button></FlexboxGridItem>
                     <FlexboxGridItem as={Col} xs={24} md={12} lg={8}>
                         <Panel className="panel" header="System Note" bordered={true}>
                             <Form fluid>
