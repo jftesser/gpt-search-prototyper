@@ -40,6 +40,7 @@ const extractSnippets = function* (document: string, snippetLength: number, over
 }
 
 const search = async (index: IndexInternals, query: string, options?: SearchOptions): Promise<string[]> => {
+    console.log("Searching for", query);
     const numResults = options?.numResults ?? 5;
     const embedTensor = await index.model.embed(query);
     let ret: [string, number][] = [];

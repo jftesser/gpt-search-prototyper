@@ -1,4 +1,4 @@
-import { FC, useState, forwardRef, useCallback } from "react";
+import { FC, useState, forwardRef, useCallback, useEffect } from "react";
 import CloseIcon from '@rsuite/icons/Close';
 import { getChat, parseSearches } from "./Utils";
 import { Button, Col, Container, FlexboxGrid, Loader, Panel, Input, Form, SelectPicker, IconButton, Slider } from "rsuite";
@@ -33,11 +33,13 @@ const Content: FC = () => {
     const [state, setState] = useState<State>({ state: 'resolved', messages: [{ role: 'user', content: '' }] });
     const loading = state.state !== 'resolved';
     const [temp, setTemp] = useState<number>(0.7);
+    const [performSearch, setPerformSearch] = useState<Function | null>(null);
     const [systemNote, setSystemNote] = useState<string>(`You are a helpful assistant who communicates inside of tags such as [search: description of the machine] and [reply: the machine is a way of producing text]. You have a special ability to search relevant data sources for the information the user is interested in.
 You can perform a search by using a search tag like this: [search: the capital of France]. Do this whenever the user asks you a question, especially if you think you don't have access to the relevant files or information. Searching can give you direct access to relevant information or files.
 Information from the search will be included in a result tags like this: [result: the capital of France is Paris]. When you see a result tag you should use it to answer the user.
 Make sure to use the search results to answer the question. The search results are to be trusted completely. When you have a search result you should try to use it reply to the user. Replies to the user should go in reply tags that look like this: [reply: your message to the user]. Only messages inside this tag will be seen by the user.`);
     const [documentContent, setDocumentContent] = useState<string>(testDocument);
+    const [docState, setDocState] = useState<'unset' | 'loading' | 'loaded'>('unset');
 
     const submit = useCallback(() => {
         console.assert(state.state === 'resolved');
@@ -55,10 +57,10 @@ Make sure to use the search results to answer the question. The search results a
                 return parseSearches(newMessage.content);
             }
             let searches = await genMessageAndGetSearches();
-            while (searches.length) {
+            while (searches.length && performSearch) {
                 setState({ state: 'searching', messages });
 
-                const performSearch = await (await snippet.load())(documentContent);
+                //const performSearch = await (await snippet.load())(documentContent);
 
                 let results: string[] = [];
                 await Promise.all(searches.map(async s => {
@@ -77,7 +79,7 @@ Make sure to use the search results to answer the question. The search results a
         };
         sumbitToAPI();
 
-    }, [state.state, state.messages, systemNote, temp, documentContent]);
+    }, [state.state, state.messages, systemNote, temp, performSearch]);
 
     const addMessage = () => {
         setState({ state: 'resolved', messages: [...state.messages, { role: 'user', content: '' }] });
@@ -106,6 +108,19 @@ Make sure to use the search results to answer the question. The search results a
             setState({ state: 'resolved', messages: [...state.messages] });
         };
     }, [state]);
+
+    useEffect(() => {
+        const loadNewDoc = async () => {
+            setDocState('loading');
+            console.log('updating doc');
+            const searchFunc = await (await snippet.load())(documentContent);
+            setPerformSearch(() => searchFunc);
+            setDocState('loaded');
+            console.log('doc updated');
+        };
+        if (documentContent) loadNewDoc();
+    }, [documentContent]);
+        
 
     const renderMessage = (m: Message, i: number) => {
         const data = ['user', 'assistant'].map(
@@ -147,6 +162,7 @@ Make sure to use the search results to answer the question. The search results a
                         <Form fluid>
                             {state.messages.map(renderMessage)}
                             {loading ? <div className="loading-holder"><Loader size="md" content={state.state === 'searching' ? "Searching your document..." : "GPT-4 is generating..."} /></div> : ''}
+                            {docState === "loading" ? <div className="loading-holder"><Loader size="md" content="Analyzing your document" /></div> : ''}
                             <div className="button-holder"><Button onClick={addMessage} disabled={loading}>Add message</Button><Button onClick={submit} disabled={loading} appearance="primary">Submit</Button></div>
                         </Form>
 
